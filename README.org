@@ -1,0 +1,6 @@
+* Oxyscheme
+Oxyscheme is a compiler (front-end?) for a reasonable subset of scheme written in Rust. It's
+meant to be educational, and not fast and state-of-art.
+
+** Things to do
+- [ ] Make clippy pedantic about everything

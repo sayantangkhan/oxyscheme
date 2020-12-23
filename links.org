@@ -1,0 +1,6 @@
+* Useful links
+** Scheme lexer and parser
+[[https://eecs490.github.io/project-scheme-parser/][Link]] to outline of specification. [[https://schemers.org/Documents/Standards/R5RS/r5rs.pdf][Detailed specifications]] here.
+** Nom guides
+- [[https://github.com/benkay86/nom-tutorial]]
+- [[https://github.com/Geal/nom/blob/master/doc/making_a_new_parser_from_scratch.md]]
