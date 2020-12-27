@@ -4,3 +4,5 @@
 ** Nom guides
 - [[https://github.com/benkay86/nom-tutorial]]
 - [[https://github.com/Geal/nom/blob/master/doc/making_a_new_parser_from_scratch.md]]
+** Compiling to LLVM
+- [[https://mukulrathi.co.uk/create-your-own-programming-language/intro-to-compiler/]]
