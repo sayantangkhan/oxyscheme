@@ -25,11 +25,17 @@ type LexResult<'a> = IResult<&'a str, Token<'a>, NomErrorStruct<&'a str>>;
 /// be dropped before the input string.
 #[derive(Debug, PartialEq)]
 pub enum Token<'a> {
+    /// Wraps a string
     String(String),
+    /// Wraps a character
     Character(char),
+    /// Wraps a boolean
     Boolean(bool),
+    /// Wraps a number
     Number(LispNum),
+    /// Wraps an identifier in the form of a string slice
     Identifier(&'a str),
+    /// Wraps a punctuator in the form of a string slice
     Punctuator(&'a str),
 }
 
@@ -40,8 +46,54 @@ pub enum Token<'a> {
 /// the future.
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum LispNum {
+    /// Wraps an `i32`
     Integer(i32),
+    /// Wraps an `f32`
     Float(f32),
+}
+
+/// Iterator of `Token`s that maintains state
+#[derive(Debug)]
+pub struct TokenStream<'a> {
+    /// The leftover input. May become a private field in the future.
+    pub input_slice: &'a str,
+}
+
+impl<'a> TokenStream<'a> {
+    /// Creates a new `TokenStream` from a string slice
+    pub fn new(input: &'a str) -> TokenStream<'a> {
+        TokenStream { input_slice: input }
+    }
+
+    /// Checks whether any more the leftover input is whitespace
+    pub fn is_empty(&self) -> bool {
+        match self.input_slice.trim() {
+            "" => true,
+            _ => false,
+        }
+    }
+}
+
+impl<'a> Iterator for TokenStream<'a> {
+    type Item = Token<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut parser = alt((
+            parse_string,
+            parse_boolean,
+            parse_character,
+            parse_identifier,
+            parse_number,
+            parse_punctuator,
+        ));
+        match parser(self.input_slice) {
+            Ok((leftover, parsed)) => {
+                self.input_slice = leftover;
+                Some(parsed)
+            }
+            _ => None,
+        }
+    }
 }
 
 fn parse_string(input: &str) -> LexResult {
