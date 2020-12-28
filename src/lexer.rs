@@ -86,12 +86,11 @@ impl<'a> Iterator for TokenStream<'a> {
             parse_number,
             parse_punctuator,
         ));
-        match parser(self.input_slice) {
-            Ok((leftover, parsed)) => {
-                self.input_slice = leftover;
-                Some(parsed)
-            }
-            _ => None,
+        if let Ok((leftover, parsed)) = parser(self.input_slice) {
+            self.input_slice = leftover;
+            Some(parsed)
+        } else {
+            None
         }
     }
 }
@@ -165,25 +164,18 @@ fn parse_number(input: &str) -> LexResult {
         tuple::<_, _, (_, ErrorKind), _>((opt(one_of("+-")), digit0, tag("."), digit1));
     // Note that one needs to annotate the tuple function in this case because the compilier
     // is unable to infer the return type.
-    match recognize(float_parser)(input) {
-        Ok((l, p)) => {
-            let parsed_num = match p.parse() {
-                Ok(num) => LispNum::Float(num),
-                Err(_) => {
-                    return Err(NomErrorEnum(NomErrorStruct::new(l, ErrorKind::TooLarge)));
-                }
-            };
-            Ok((l, Token::Number(parsed_num)))
+    if let Ok((l, p)) = recognize(float_parser)(input) {
+        if let Ok(num) = p.parse() {
+            Ok((l, Token::Number(LispNum::Float(num))))
+        } else {
+            Err(NomErrorEnum(NomErrorStruct::new(l, ErrorKind::TooLarge)))
         }
-        Err(_) => {
-            let (l, p) = recognize(integer_parser)(input)?;
-            let parsed_num = match p.parse() {
-                Ok(num) => LispNum::Integer(num),
-                Err(_) => {
-                    return Err(NomErrorEnum(NomErrorStruct::new(l, ErrorKind::TooLarge)));
-                }
-            };
-            Ok((l, Token::Number(parsed_num)))
+    } else {
+        let (l, p) = recognize(integer_parser)(input)?;
+        if let Ok(num) = p.parse() {
+            Ok((l, Token::Number(LispNum::Integer(num))))
+        } else {
+            Err(NomErrorEnum(NomErrorStruct::new(l, ErrorKind::TooLarge)))
         }
     }
 }

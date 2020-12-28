@@ -3,6 +3,7 @@ Oxyscheme is a compiler (front-end?) for a reasonable subset of scheme written i
 meant to be educational, and not fast and state-of-art.
 
 ** Things to do
-- [ ] Make clippy pedantic about everything
 - [ ] Make lexer lenient enough to handle whitespace
 - [ ] Lex tokens that don't necessarily end with delimiter
+- [X] Use ~if let~ and ~while let~ wherever applicable
+- [X] Make clippy pedantic about everything
