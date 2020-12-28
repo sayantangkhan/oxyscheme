@@ -21,5 +21,3 @@ pub enum CompilerError {
     #[error("Error at line {1}, near \"{0}\" while lexing input")]
     LexError(String, usize),
 }
-
-// pub fn create_token_stream

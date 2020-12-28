@@ -2,10 +2,10 @@
 use nom::{
     branch::alt,
     bytes::complete::{escaped_transform, is_not, tag},
-    character::complete::{anychar, digit0, digit1, one_of, satisfy},
+    character::complete::{anychar, digit0, digit1, none_of, one_of, satisfy},
     combinator::{map, opt, peek, recognize, value},
     error::ErrorKind,
-    multi::many0,
+    multi::{many0, many1},
     sequence::tuple,
     IResult,
 };
@@ -22,7 +22,8 @@ type LexResult<'a> = IResult<&'a str, Token<'a>, NomErrorStruct<&'a str>>;
 /// `Character`, and `Boolean`. `Number` wraps around `LispNum`, which can either be an `f32`
 /// or an `i32`. `Identifier` and `Punctuator` wrap around slices from the input, to avoid
 /// unnecessary heap copying and heap allocation. In particular, this means that the token cannot
-/// be dropped before the input string.
+/// be dropped before the input string. `Whitespace` and `Comment` are representative of whitespaces
+/// and comments without wrapping around anything.
 #[derive(Debug, PartialEq)]
 pub enum Token<'a> {
     /// Wraps a string
@@ -37,6 +38,10 @@ pub enum Token<'a> {
     Identifier(&'a str),
     /// Wraps a punctuator in the form of a string slice
     Punctuator(&'a str),
+    /// Represents whitespace
+    Whitespace,
+    /// Represents comments
+    Comment,
 }
 
 /// Internal representation of numeric types in Scheme
@@ -67,7 +72,7 @@ impl<'a> TokenStream<'a> {
 
     /// Checks whether any more the leftover input is whitespace
     pub fn is_empty(&self) -> bool {
-        match self.input_slice.trim() {
+        match self.input_slice {
             "" => true,
             _ => false,
         }
@@ -79,12 +84,14 @@ impl<'a> Iterator for TokenStream<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut parser = alt((
-            parse_string,
-            parse_boolean,
-            parse_character,
-            parse_identifier,
-            parse_number,
-            parse_punctuator,
+            lex_string,
+            lex_boolean,
+            lex_character,
+            lex_identifier,
+            lex_number,
+            lex_punctuator,
+            lex_whitespace,
+            lex_comment,
         ));
         if let Ok((leftover, parsed)) = parser(self.input_slice) {
             self.input_slice = leftover;
@@ -95,7 +102,7 @@ impl<'a> Iterator for TokenStream<'a> {
     }
 }
 
-fn parse_string(input: &str) -> LexResult {
+fn lex_string(input: &str) -> LexResult {
     let (input, _) = tag("\"")(input)?;
     let (leftover, parsed) = escaped_transform(
         is_not("\\\""),
@@ -110,7 +117,7 @@ fn parse_string(input: &str) -> LexResult {
     Ok((input, Token::String(parsed)))
 }
 
-fn parse_boolean(input: &str) -> LexResult {
+fn lex_boolean(input: &str) -> LexResult {
     let (input, _) = tag("#")(input)?;
     let (leftover, parsed) = one_of("tf")(input)?;
     match parsed {
@@ -126,7 +133,7 @@ fn peek_delimiter(input: &str) -> IResult<&str, ()> {
     map(peek(delimiter), |_: char| ())(input)
 }
 
-fn parse_character(input: &str) -> LexResult {
+fn lex_character(input: &str) -> LexResult {
     let (input, _) = tag("#\\")(input)?;
     let space_parser = map(tag("space"), |_| ' ');
     let newline_parser = map(tag("newline"), |_| '\n');
@@ -151,14 +158,14 @@ fn non_peculiar(input: &str) -> IResult<&str, &str> {
     recognize(tuple((initial, many0(subsequent))))(input)
 }
 
-fn parse_identifier(input: &str) -> LexResult {
+fn lex_identifier(input: &str) -> LexResult {
     let peculiar_identifier = alt((tag("+"), tag("-"), tag("...")));
     let (leftover, parsed) = alt((non_peculiar, peculiar_identifier))(input)?;
     peek_delimiter(leftover)?;
     Ok((leftover, Token::Identifier(parsed)))
 }
 
-fn parse_number(input: &str) -> LexResult {
+fn lex_number(input: &str) -> LexResult {
     let integer_parser = tuple((opt(one_of("+-")), digit1));
     let float_parser =
         tuple::<_, _, (_, ErrorKind), _>((opt(one_of("+-")), digit0, tag("."), digit1));
@@ -180,7 +187,7 @@ fn parse_number(input: &str) -> LexResult {
     }
 }
 
-fn parse_punctuator(input: &str) -> LexResult {
+fn lex_punctuator(input: &str) -> LexResult {
     alt((
         tag("("),
         tag(")"),
@@ -194,31 +201,41 @@ fn parse_punctuator(input: &str) -> LexResult {
     .map(|(l, p)| (l, Token::Punctuator(p)))
 }
 
+fn lex_whitespace(input: &str) -> LexResult {
+    many1(alt((tag(" "), tag("\n"))))(input).map(|(l, _)| (l, Token::Whitespace))
+}
+
+fn lex_comment(input: &str) -> LexResult {
+    let ends_with_newline = recognize(tuple((tag(";"), many0(none_of("\n")), tag("\n"))));
+    let ends_without_newline = recognize(tuple((tag(";"), many0(none_of("\n")))));
+    alt((ends_with_newline, ends_without_newline))(input).map(|(l, _)| (l, Token::Comment))
+}
+
 #[cfg(test)]
 mod test {
 
     use super::*;
 
     #[test]
-    fn parse_string_test() {
+    fn lex_string_test() {
         assert_eq!(
-            parse_string(r#""string""#),
+            lex_string(r#""string""#),
             Ok(("", Token::String(String::from("string"))))
         );
         assert_eq!(
-            parse_string(r#""st\"ring""#),
+            lex_string(r#""st\"ring""#),
             Ok(("", Token::String(String::from("st\"ring"))))
         );
         assert_eq!(
-            parse_string(r#""fail"#),
+            lex_string(r#""fail"#),
             Err(NomErrorEnum(NomErrorStruct::new("", ErrorKind::Tag)))
         );
         assert_eq!(
-            parse_string(r#""new\nline""#),
+            lex_string(r#""new\nline""#),
             Ok(("", Token::String(String::from("new\nline"))))
         );
         assert_eq!(
-            parse_string(r#"blah"string""#),
+            lex_string(r#"blah"string""#),
             Err(NomErrorEnum(NomErrorStruct::new(
                 "blah\"string\"",
                 ErrorKind::Tag
@@ -227,24 +244,24 @@ mod test {
     }
 
     #[test]
-    fn parse_boolean_test() {
-        assert_eq!(parse_boolean("#t"), Ok(("", Token::Boolean(true))));
-        assert_eq!(parse_boolean("#f"), Ok(("", Token::Boolean(false))));
+    fn lex_boolean_test() {
+        assert_eq!(lex_boolean("#t"), Ok(("", Token::Boolean(true))));
+        assert_eq!(lex_boolean("#f"), Ok(("", Token::Boolean(false))));
         assert_eq!(
-            parse_boolean("#m"),
+            lex_boolean("#m"),
             Err(NomErrorEnum(NomErrorStruct::new("m", ErrorKind::OneOf)))
         );
     }
 
     #[test]
-    fn parse_character_test() {
-        assert_eq!(parse_character("#\\n\n"), Ok(("\n", Token::Character('n'))));
+    fn lex_character_test() {
+        assert_eq!(lex_character("#\\n\n"), Ok(("\n", Token::Character('n'))));
         assert_eq!(
-            parse_character("#\\space\n"),
+            lex_character("#\\space\n"),
             Ok(("\n", Token::Character(' ')))
         );
         assert_eq!(
-            parse_character("#\\newline\n"),
+            lex_character("#\\newline\n"),
             Ok(("\n", Token::Character('\n')))
         );
     }
@@ -261,88 +278,91 @@ mod test {
     }
 
     #[test]
-    fn parse_identifier_test() {
+    fn lex_identifier_test() {
         assert_eq!(
-            parse_identifier("...\n"),
+            lex_identifier("...\n"),
             Ok(("\n", Token::Identifier("...")))
         );
         assert_eq!(
-            parse_identifier("var\n"),
+            lex_identifier("var\n"),
             Ok(("\n", Token::Identifier("var")))
         );
+        assert_eq!(lex_identifier("var "), Ok((" ", Token::Identifier("var"))));
+        assert_eq!(lex_identifier("var)"), Ok((")", Token::Identifier("var"))));
+        assert_eq!(lex_identifier("var;"), Ok((";", Token::Identifier("var"))));
         assert_eq!(
-            parse_identifier("var "),
-            Ok((" ", Token::Identifier("var")))
-        );
-        assert_eq!(
-            parse_identifier("var)"),
-            Ok((")", Token::Identifier("var")))
-        );
-        assert_eq!(
-            parse_identifier("var;"),
-            Ok((";", Token::Identifier("var")))
-        );
-        assert_eq!(
-            parse_identifier("var\""),
+            lex_identifier("var\""),
             Ok(("\"", Token::Identifier("var")))
         );
         assert_eq!(
-            parse_identifier("he++o "),
+            lex_identifier("he++o "),
             Ok((" ", Token::Identifier("he++o")))
         );
         assert_eq!(
-            parse_identifier("hel.o "),
+            lex_identifier("hel.o "),
             Ok((" ", Token::Identifier("hel.o")))
         );
         assert_eq!(
-            parse_identifier("..."),
+            lex_identifier("..."),
             Err(NomErrorEnum(NomErrorStruct::new("", ErrorKind::OneOf)))
         );
         assert_eq!(
-            parse_identifier("asdf,"),
+            lex_identifier("asdf,"),
             Err(NomErrorEnum(NomErrorStruct::new(",", ErrorKind::OneOf)))
         );
     }
 
     #[test]
-    fn parse_number_test() {
+    fn lex_number_test() {
         assert_eq!(
-            parse_number("+3.14;"),
+            lex_number("+3.14;"),
             Ok((";", Token::Number(LispNum::Float(3.14))))
         );
         assert_eq!(
-            parse_number("-3.14;"),
+            lex_number("-3.14;"),
             Ok((";", Token::Number(LispNum::Float(-3.14))))
         );
         assert_eq!(
-            parse_number("3.14;"),
+            lex_number("3.14;"),
             Ok((";", Token::Number(LispNum::Float(3.14))))
         );
         assert_eq!(
-            parse_number(".14;"),
+            lex_number(".14;"),
             Ok((";", Token::Number(LispNum::Float(0.14))))
         );
         assert_eq!(
-            parse_number("1;"),
+            lex_number("1;"),
             Ok((";", Token::Number(LispNum::Integer(1))))
         );
         assert_eq!(
-            parse_number("-1;"),
+            lex_number("-1;"),
             Ok((";", Token::Number(LispNum::Integer(-1))))
         );
         assert_eq!(
-            parse_number("-1;"),
+            lex_number("-1;"),
             Ok((";", Token::Number(LispNum::Integer(-1))))
         );
         assert_eq!(
-            parse_number("4294967296;"),
+            lex_number("4294967296;"),
             Err(NomErrorEnum(NomErrorStruct::new(";", ErrorKind::TooLarge)))
         );
     }
 
     #[test]
-    fn parse_punctuator_test() {
-        assert_eq!(parse_punctuator(",3"), Ok(("3", Token::Punctuator(","))));
-        assert_eq!(parse_punctuator(",@"), Ok(("", Token::Punctuator(",@"))));
+    fn lex_punctuator_test() {
+        assert_eq!(lex_punctuator(",3"), Ok(("3", Token::Punctuator(","))));
+        assert_eq!(lex_punctuator(",@"), Ok(("", Token::Punctuator(",@"))));
+    }
+
+    #[test]
+    fn lex_whitespace_test() {
+        assert_eq!(lex_whitespace(" 3"), Ok(("3", Token::Whitespace)));
+        assert_eq!(lex_whitespace(" \n3"), Ok(("3", Token::Whitespace)));
+    }
+
+    #[test]
+    fn lex_comment_test() {
+        assert_eq!(lex_comment("; Blah"), Ok(("", Token::Comment)));
+        assert_eq!(lex_comment("; Blah\n3"), Ok(("3", Token::Comment)));
     }
 }
