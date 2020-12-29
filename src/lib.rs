@@ -19,6 +19,6 @@ pub enum CompilerError {
     ///
     /// `LexError` wraps around a `String` and a `usize`. The first `usize` is the line number in the input,
     /// the second `usize` is the column number, and the `String` is a copy of the leftover unlexed input from the line.
-    #[error("Error at line {1}, column {2}, near \"{0}\" while lexing input")]
+    #[error("Lex error at line {1}, column {2}, near \"{0}\" while lexing input")]
     LexError(String, usize, usize),
 }

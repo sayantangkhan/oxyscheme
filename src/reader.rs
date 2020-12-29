@@ -3,8 +3,8 @@ use crate::lexer::*;
 
 /// Wrapper around `Token` that keeps track of line and column
 #[derive(Debug)]
-pub struct TokenWithPosition<'a> {
-    token: Token<'a>,
+pub struct TokenWithPosition {
+    token: Token,
     line: usize,
     column: usize,
 }
@@ -40,7 +40,7 @@ impl<'a> TokenStream<'a> {
 }
 
 impl<'a> Iterator for TokenStream<'a> {
-    type Item = TokenWithPosition<'a>;
+    type Item = TokenWithPosition;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Ok((leftover, parsed)) = lex_input(self.input_slice) {

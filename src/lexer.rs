@@ -22,7 +22,7 @@ use nom::Err::Error as NomErrorEnum;
 /// be dropped before the input string. `Whitespace` and `Comment` are representative of whitespaces
 /// and comments without wrapping around anything.
 #[derive(Debug, PartialEq)]
-pub enum Token<'a> {
+pub enum Token {
     /// Wraps a string
     String(String),
     /// Wraps a character
@@ -32,9 +32,9 @@ pub enum Token<'a> {
     /// Wraps a number
     Number(LispNum),
     /// Wraps an identifier in the form of a string slice
-    Identifier(&'a str),
+    Identifier(String),
     /// Wraps a punctuator in the form of a string slice
-    Punctuator(&'a str),
+    Punctuator(String),
     /// Represents whitespace
     Whitespace,
     /// Represents comments
@@ -55,7 +55,7 @@ pub enum LispNum {
 }
 
 /// Type alias for the common return type for the lexers
-type LexResult<'a> = IResult<&'a str, Token<'a>, NomErrorStruct<&'a str>>;
+type LexResult<'a> = IResult<&'a str, Token, NomErrorStruct<&'a str>>;
 
 /// The general lexer that lexes any valid input string
 pub fn lex_input(input: &str) -> LexResult<'_> {
@@ -132,7 +132,7 @@ fn lex_identifier(input: &str) -> LexResult<'_> {
     let peculiar_identifier = alt((tag("+"), tag("-"), tag("...")));
     let (leftover, parsed) = alt((non_peculiar, peculiar_identifier))(input)?;
     peek_delimiter(leftover)?;
-    Ok((leftover, Token::Identifier(parsed)))
+    Ok((leftover, Token::Identifier(String::from(parsed))))
 }
 
 fn lex_number(input: &str) -> LexResult<'_> {
@@ -168,7 +168,7 @@ fn lex_punctuator(input: &str) -> LexResult<'_> {
         tag(","),
         tag("."),
     ))(input)
-    .map(|(l, p)| (l, Token::Punctuator(p)))
+    .map(|(l, p)| (l, Token::Punctuator(String::from(p))))
 }
 
 fn lex_whitespace(input: &str) -> LexResult<'_> {
@@ -251,26 +251,35 @@ mod test {
     fn lex_identifier_test() {
         assert_eq!(
             lex_identifier("...\n"),
-            Ok(("\n", Token::Identifier("...")))
+            Ok(("\n", Token::Identifier("...".to_string())))
         );
         assert_eq!(
             lex_identifier("var\n"),
-            Ok(("\n", Token::Identifier("var")))
+            Ok(("\n", Token::Identifier("var".to_string())))
         );
-        assert_eq!(lex_identifier("var "), Ok((" ", Token::Identifier("var"))));
-        assert_eq!(lex_identifier("var)"), Ok((")", Token::Identifier("var"))));
-        assert_eq!(lex_identifier("var;"), Ok((";", Token::Identifier("var"))));
+        assert_eq!(
+            lex_identifier("var "),
+            Ok((" ", Token::Identifier("var".to_string())))
+        );
+        assert_eq!(
+            lex_identifier("var)"),
+            Ok((")", Token::Identifier("var".to_string())))
+        );
+        assert_eq!(
+            lex_identifier("var;"),
+            Ok((";", Token::Identifier("var".to_string())))
+        );
         assert_eq!(
             lex_identifier("var\""),
-            Ok(("\"", Token::Identifier("var")))
+            Ok(("\"", Token::Identifier("var".to_string())))
         );
         assert_eq!(
             lex_identifier("he++o "),
-            Ok((" ", Token::Identifier("he++o")))
+            Ok((" ", Token::Identifier("he++o".to_string())))
         );
         assert_eq!(
             lex_identifier("hel.o "),
-            Ok((" ", Token::Identifier("hel.o")))
+            Ok((" ", Token::Identifier("hel.o".to_string())))
         );
         assert_eq!(
             lex_identifier("..."),
@@ -320,8 +329,14 @@ mod test {
 
     #[test]
     fn lex_punctuator_test() {
-        assert_eq!(lex_punctuator(",3"), Ok(("3", Token::Punctuator(","))));
-        assert_eq!(lex_punctuator(",@"), Ok(("", Token::Punctuator(",@"))));
+        assert_eq!(
+            lex_punctuator(",3"),
+            Ok(("3", Token::Punctuator(",".to_string())))
+        );
+        assert_eq!(
+            lex_punctuator(",@"),
+            Ok(("", Token::Punctuator(",@".to_string())))
+        );
     }
 
     #[test]
