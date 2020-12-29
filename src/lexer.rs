@@ -13,9 +13,6 @@ use nom::{
 use nom::error::Error as NomErrorStruct;
 use nom::Err::Error as NomErrorEnum;
 
-/// Type alias for the common return type for the lexers
-type LexResult<'a> = IResult<&'a str, Token<'a>, NomErrorStruct<&'a str>>;
-
 /// Terminal token types for the lexer
 ///
 /// The variants of `Token` wrap around the corresponding Rust types in the case of `String`,
@@ -57,49 +54,22 @@ pub enum LispNum {
     Float(f32),
 }
 
-/// Iterator of `Token`s that maintains state
-#[derive(Debug)]
-pub struct TokenStream<'a> {
-    /// The leftover input. May become a private field in the future.
-    pub input_slice: &'a str,
-}
+/// Type alias for the common return type for the lexers
+type LexResult<'a> = IResult<&'a str, Token<'a>, NomErrorStruct<&'a str>>;
 
-impl<'a> TokenStream<'a> {
-    /// Creates a new `TokenStream` from a string slice
-    pub fn new(input: &'a str) -> TokenStream<'a> {
-        TokenStream { input_slice: input }
-    }
-
-    /// Checks whether any more the leftover input is whitespace
-    pub fn is_empty(&self) -> bool {
-        match self.input_slice {
-            "" => true,
-            _ => false,
-        }
-    }
-}
-
-impl<'a> Iterator for TokenStream<'a> {
-    type Item = Token<'a>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let mut parser = alt((
-            lex_string,
-            lex_boolean,
-            lex_character,
-            lex_identifier,
-            lex_number,
-            lex_punctuator,
-            lex_whitespace,
-            lex_comment,
-        ));
-        if let Ok((leftover, parsed)) = parser(self.input_slice) {
-            self.input_slice = leftover;
-            Some(parsed)
-        } else {
-            None
-        }
-    }
+/// The general lexer that lexes any valid input string
+pub fn lex_input(input: &str) -> LexResult {
+    let mut parser = alt((
+        lex_string,
+        lex_boolean,
+        lex_character,
+        lex_identifier,
+        lex_number,
+        lex_punctuator,
+        lex_whitespace,
+        lex_comment,
+    ));
+    parser(input)
 }
 
 fn lex_string(input: &str) -> LexResult {

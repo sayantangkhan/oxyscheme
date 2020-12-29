@@ -6,8 +6,9 @@
 
 #![warn(missing_docs, unused_variables)]
 
-pub mod lexer;
+mod lexer;
 mod parser;
+pub mod reader;
 
 use thiserror::Error;
 
@@ -16,8 +17,8 @@ use thiserror::Error;
 pub enum CompilerError {
     /// Indicates a lexing error
     ///
-    /// `LexError` wraps around a `String` and a `usize`. The `usize` is the line number in the input,
-    /// and the `String` is a copy of the leftover unlexed input from the line.
-    #[error("Error at line {1}, near \"{0}\" while lexing input")]
-    LexError(String, usize),
+    /// `LexError` wraps around a `String` and a `usize`. The first `usize` is the line number in the input,
+    /// the second `usize` is the column number, and the `String` is a copy of the leftover unlexed input from the line.
+    #[error("Error at line {1}, column {2}, near \"{0}\" while lexing input")]
+    LexError(String, usize, usize),
 }
