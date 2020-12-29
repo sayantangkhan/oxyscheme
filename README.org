@@ -3,9 +3,12 @@ Oxyscheme is a compiler (front-end?) for a reasonable subset of scheme written i
 meant to be educational, and not fast and state-of-art.
 
 ** Things to do
+*** Features to implement/fix
 - [ ] Improve error message handling, by implementing ~Debug~ or ~Display~ trait for ~CompilerError~
 - [ ] Lex tokens that don't necessarily end with delimiter
 - [X] Make lexer lenient enough to handle whitespace
 - [X] Handle comment strings as well
+*** Refactoring
+- [ ] Use ~ref~ and ~ref mut~ wherever that's more idiomatic
 - [X] Use ~if let~ and ~while let~ wherever applicable
 - [X] Make clippy pedantic about everything
