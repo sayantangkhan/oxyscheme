@@ -5,6 +5,7 @@ meant to be educational, and not fast and state-of-art.
 ** Things to do
 *** Features to implement/fix
 - [ ] Lex tokens that don't necessarily end with delimiter
+- [ ] Add more comprehensive tests using the source code files in ~./input/~
 - [X] Improve error message handling, by implementing ~Debug~ or ~Display~ trait for ~CompilerError~
 - [X] Make lexer lenient enough to handle whitespace
 - [X] Handle comment strings as well
@@ -13,5 +14,7 @@ meant to be educational, and not fast and state-of-art.
 - [ ] Use ~ref~ and ~ref mut~ wherever that's more idiomatic
 - [X] Use ~if let~ and ~while let~ wherever applicable
 - [X] Make clippy pedantic about everything
+*** Long term wishlist
+- [ ] Use ~codespan~ to get nicer error reporting
 *** Can't/Won't fix
 - +Make nom combinators work with ~Token~ (or ~TokenStream~?)+ The documentation for custom token types in nom isn't great, and not worth the time to untangle.
