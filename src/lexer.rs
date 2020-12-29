@@ -58,7 +58,7 @@ pub enum LispNum {
 type LexResult<'a> = IResult<&'a str, Token<'a>, NomErrorStruct<&'a str>>;
 
 /// The general lexer that lexes any valid input string
-pub fn lex_input(input: &str) -> LexResult {
+pub fn lex_input(input: &str) -> LexResult<'_> {
     let mut parser = alt((
         lex_string,
         lex_boolean,
@@ -72,7 +72,7 @@ pub fn lex_input(input: &str) -> LexResult {
     parser(input)
 }
 
-fn lex_string(input: &str) -> LexResult {
+fn lex_string(input: &str) -> LexResult<'_> {
     let (input, _) = tag("\"")(input)?;
     let (leftover, parsed) = escaped_transform(
         is_not("\\\""),
@@ -87,7 +87,7 @@ fn lex_string(input: &str) -> LexResult {
     Ok((input, Token::String(parsed)))
 }
 
-fn lex_boolean(input: &str) -> LexResult {
+fn lex_boolean(input: &str) -> LexResult<'_> {
     let (input, _) = tag("#")(input)?;
     let (leftover, parsed) = one_of("tf")(input)?;
     match parsed {
@@ -103,7 +103,7 @@ fn peek_delimiter(input: &str) -> IResult<&str, ()> {
     map(peek(delimiter), |_: char| ())(input)
 }
 
-fn lex_character(input: &str) -> LexResult {
+fn lex_character(input: &str) -> LexResult<'_> {
     let (input, _) = tag("#\\")(input)?;
     let space_parser = map(tag("space"), |_| ' ');
     let newline_parser = map(tag("newline"), |_| '\n');
@@ -128,14 +128,14 @@ fn non_peculiar(input: &str) -> IResult<&str, &str> {
     recognize(tuple((initial, many0(subsequent))))(input)
 }
 
-fn lex_identifier(input: &str) -> LexResult {
+fn lex_identifier(input: &str) -> LexResult<'_> {
     let peculiar_identifier = alt((tag("+"), tag("-"), tag("...")));
     let (leftover, parsed) = alt((non_peculiar, peculiar_identifier))(input)?;
     peek_delimiter(leftover)?;
     Ok((leftover, Token::Identifier(parsed)))
 }
 
-fn lex_number(input: &str) -> LexResult {
+fn lex_number(input: &str) -> LexResult<'_> {
     let integer_parser = tuple((opt(one_of("+-")), digit1));
     let float_parser =
         tuple::<_, _, (_, ErrorKind), _>((opt(one_of("+-")), digit0, tag("."), digit1));
@@ -157,7 +157,7 @@ fn lex_number(input: &str) -> LexResult {
     }
 }
 
-fn lex_punctuator(input: &str) -> LexResult {
+fn lex_punctuator(input: &str) -> LexResult<'_> {
     alt((
         tag("("),
         tag(")"),
@@ -171,11 +171,11 @@ fn lex_punctuator(input: &str) -> LexResult {
     .map(|(l, p)| (l, Token::Punctuator(p)))
 }
 
-fn lex_whitespace(input: &str) -> LexResult {
+fn lex_whitespace(input: &str) -> LexResult<'_> {
     many1(alt((tag(" "), tag("\n"))))(input).map(|(l, _)| (l, Token::Whitespace))
 }
 
-fn lex_comment(input: &str) -> LexResult {
+fn lex_comment(input: &str) -> LexResult<'_> {
     let ends_with_newline = recognize(tuple((tag(";"), many0(none_of("\n")), tag("\n"))));
     let ends_without_newline = recognize(tuple((tag(";"), many0(none_of("\n")))));
     alt((ends_with_newline, ends_without_newline))(input).map(|(l, _)| (l, Token::Comment))

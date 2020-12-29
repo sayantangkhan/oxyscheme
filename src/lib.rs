@@ -4,7 +4,7 @@
 //! ## Usage
 //! TO ADD
 
-#![warn(missing_docs, unused_variables)]
+#![warn(missing_docs, unused_variables, rust_2018_idioms)]
 
 mod lexer;
 mod parser;
