@@ -1,7 +1,6 @@
 //! Module to succesively parse a stream of `Token`s into `Expression`s and then `Program`.
 
 use crate::lexer::LispNum;
-use crate::reader::TokenStream;
 
 enum Datum {
     Boolean(bool),

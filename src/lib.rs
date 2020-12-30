@@ -21,4 +21,10 @@ pub enum CompilerError {
     /// the second `usize` is the column number, and the `String` is a copy of the leftover unlexed input from the line.
     #[error("Lex error at line {1}, column {2}, near \"{0}\" while lexing input")]
     LexError(String, usize, usize),
+
+    /// Indicates an IO error
+    ///
+    /// Usually happens if the source files cannot be opened
+    #[error("I/O error")]
+    IOError(#[from] std::io::Error),
 }

@@ -1,5 +1,117 @@
 //! Handles reading files, and annotating tokens with line and column numbers
 use crate::lexer::*;
+use crate::*;
+use anyhow::Result;
+use std::{
+    fs::File,
+    io::{BufRead, BufReader, Lines},
+    iter::Enumerate,
+    path::PathBuf,
+};
+
+/// `FileLexer` can be turned into an iterator of `Ok(TokenWithPosition)` and `Err(_)`
+///
+/// An instance of `FileLexer` can be created using the `FileLexer::new` method, which
+/// takes a `&str` input for the filename, and returns `Result<FileLexer, CompilerError>`,
+/// the `Err` case showing up when the given file cannot be opened. `FileLexer` implements
+/// the `IntoIterator` trait, which means one can get a list of `TokenWithPosition`s using
+/// a `for` loop over a `FileLexer`. More specifically, the associated iterator `Item`
+/// is `Result<TokenWithPosition, CompilerError>`. On the first instance of encountering
+/// a lexing error, the iterator outputs the corresponding error, and then stops. The idiomatic
+/// way of turning a `FileLexer` into `Result<Vec<TokenWithPosition>, CompilerError>` is the
+/// following.
+///
+/// ```
+/// let file_lexer = FileLexer::new(filename)?;
+/// let vec_of_tokens_res: Result<Vec<TokenWithPosition>, CompilerError> = file_lexer.into_iter().collect();
+/// ```
+pub struct FileLexer {
+    file: File,
+}
+
+impl FileLexer {
+    /// Creates a `FileLexer` from a filename. May return `Err` if the file cannot be opened.
+    pub fn new(filename: &str) -> Result<Self, CompilerError> {
+        Ok(FileLexer {
+            file: File::open(PathBuf::from(filename))?,
+        })
+    }
+}
+
+impl IntoIterator for FileLexer {
+    type Item = Result<TokenWithPosition, CompilerError>;
+    type IntoIter = FileLexerIntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        let line_enumerator = BufReader::new(self.file).lines().enumerate();
+        let input_string = String::from("");
+        FileLexerIntoIter {
+            line_enumerator,
+            input_string,
+            cursor_position: 0,
+            line_number: 0,
+            encountered_error: false,
+        }
+    }
+}
+
+/// The associated Iterator type for FileLexer
+pub struct FileLexerIntoIter {
+    line_enumerator: Enumerate<Lines<BufReader<File>>>,
+    input_string: String,
+    cursor_position: usize,
+    line_number: usize,
+    encountered_error: bool,
+}
+
+impl Iterator for FileLexerIntoIter {
+    type Item = Result<TokenWithPosition, CompilerError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.encountered_error {
+            return None;
+        }
+
+        while self.input_string.len() <= self.cursor_position {
+            if let Some((index, line_res)) = self.line_enumerator.next() {
+                match line_res {
+                    Ok(line) => {
+                        self.input_string = line;
+                        self.cursor_position = 0;
+                        self.line_number = index + 1;
+                    }
+                    Err(e) => {
+                        self.encountered_error = true;
+                        return Some(Err(CompilerError::IOError(e)));
+                    }
+                }
+            } else {
+                return None;
+            }
+        }
+
+        match lex_input(&self.input_string[self.cursor_position..]) {
+            Ok((leftover, parsed)) => {
+                let token_with_position = TokenWithPosition {
+                    token: parsed,
+                    line: self.line_number,
+                    column: self.cursor_position,
+                };
+                self.cursor_position = self.input_string.len() - leftover.len();
+
+                return Some(Ok(token_with_position));
+            }
+            Err(_) => {
+                self.encountered_error = true;
+                return Some(Err(CompilerError::LexError(
+                    String::from(&self.input_string[self.cursor_position..]),
+                    self.line_number,
+                    self.cursor_position,
+                )));
+            }
+        }
+    }
+}
 
 /// Wrapper around `Token` that keeps track of line and column
 #[derive(Debug)]
@@ -7,54 +119,4 @@ pub struct TokenWithPosition {
     token: Token,
     line: usize,
     column: usize,
-}
-
-/// Iterator of `Token`s that maintains state
-#[derive(Debug)]
-pub struct TokenStream<'a> {
-    /// The leftover input. May become a private field in the future.
-    pub input_slice: &'a str,
-    /// Line number in input
-    pub line_number: usize,
-    /// Cursor position in input_slice
-    pub cursor_position: usize,
-}
-
-impl<'a> TokenStream<'a> {
-    /// Creates a new `TokenStream` from a string slice
-    pub fn new(input: &'a str, line_number: usize) -> TokenStream<'a> {
-        TokenStream {
-            input_slice: input,
-            line_number,
-            cursor_position: 0,
-        }
-    }
-
-    /// Checks whether any more input left
-    pub fn is_empty(&self) -> bool {
-        match self.input_slice {
-            "" => true,
-            _ => false,
-        }
-    }
-}
-
-impl<'a> Iterator for TokenStream<'a> {
-    type Item = TokenWithPosition;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Ok((leftover, parsed)) = lex_input(self.input_slice) {
-            let len_leftover = self.input_slice.len();
-            self.input_slice = leftover;
-            let token_with_position = TokenWithPosition {
-                token: parsed,
-                line: self.line_number,
-                column: self.cursor_position,
-            };
-            self.cursor_position += len_leftover - self.input_slice.len();
-            Some(token_with_position)
-        } else {
-            None
-        }
-    }
 }

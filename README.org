@@ -10,8 +10,8 @@ meant to be educational, and not fast and state-of-art.
 - [X] Make lexer lenient enough to handle whitespace
 - [X] Handle comment strings as well
 *** Refactoring
-- [ ] Make it possible to turn a file into a stream of Tokens
 - [ ] Use ~ref~ and ~ref mut~ wherever that's more idiomatic
+- [X] Make it possible to turn a file into a stream of Tokens
 - [X] Use ~if let~ and ~while let~ wherever applicable
 - [X] Make clippy pedantic about everything
 *** Long term wishlist
