@@ -13,6 +13,14 @@ use nom::{
 use nom::error::Error as NomErrorStruct;
 use nom::Err::Error as NomErrorEnum;
 
+/// Wrapper around `Token` that keeps track of line and column
+#[derive(Debug)]
+pub struct TokenWithPosition {
+    pub token: Token,
+    pub line: usize,
+    pub column: usize,
+}
+
 /// Terminal token types for the lexer
 ///
 /// The variants of `Token` wrap around the corresponding Rust types in the case of `String`,

@@ -21,7 +21,7 @@ use std::{
 /// way of turning a `FileLexer` into `Result<Vec<TokenWithPosition>, CompilerError>` is the
 /// following.
 ///
-/// ```
+/// ```ignore
 /// let file_lexer = FileLexer::new(filename)?;
 /// let vec_of_tokens_res: Result<Vec<TokenWithPosition>, CompilerError> = file_lexer.into_iter().collect();
 /// ```
@@ -111,12 +111,4 @@ impl Iterator for FileLexerIntoIter {
             }
         }
     }
-}
-
-/// Wrapper around `Token` that keeps track of line and column
-#[derive(Debug)]
-pub struct TokenWithPosition {
-    token: Token,
-    line: usize,
-    column: usize,
 }

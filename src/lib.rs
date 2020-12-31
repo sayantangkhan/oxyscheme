@@ -10,6 +10,7 @@ mod lexer;
 mod parser;
 pub mod reader;
 
+use lexer::Token;
 use thiserror::Error;
 
 /// The toplevel error type for the crate
@@ -21,6 +22,12 @@ pub enum CompilerError {
     /// the second `usize` is the column number, and the `String` is a copy of the leftover unlexed input from the line.
     #[error("Lex error at line {1}, column {2}, near \"{0}\" while lexing input")]
     LexError(String, usize, usize),
+
+    #[error("Token stream ended unexpectedly")]
+    TokenStreamEnded,
+
+    #[error("Unexpected token encountered at line {0}, column {1} while parsing input")]
+    UnexpectedToken(usize, usize),
 
     /// Indicates an IO error
     ///
