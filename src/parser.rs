@@ -45,6 +45,7 @@ where
                 token_stream.next();
                 parse_into_datum(token_stream)
             }
+            Token::Punctuator(p) if p == "#(" => parse_vector(token_stream),
             _ => Err(CompilerError::UnexpectedToken(*line, *column)),
         },
 
@@ -69,13 +70,51 @@ where
     }
 }
 
+fn parse_vector<I>(token_stream: &mut Peekable<I>) -> Result<Datum, CompilerError>
+where
+    I: Iterator<Item = Result<TokenWithPosition, CompilerError>>,
+{
+    let mut vector = Vec::new();
+
+    // Consuming the "#("
+    token_stream.next();
+
+    loop {
+        match token_stream.peek() {
+            Some(Ok(token_with_position)) => {
+                let token = &token_with_position.token;
+                match token {
+                    Token::Punctuator(p) if p == ")" => {
+                        token_stream.next();
+                        break;
+                    }
+                    _ => {
+                        let datum = parse_into_datum(token_stream)?;
+                        vector.push(datum);
+                    }
+                }
+            }
+
+            Some(Err(_)) => {
+                return Err(token_stream.next().unwrap().unwrap_err());
+            }
+
+            None => {
+                return Err(CompilerError::MissingCloseParen);
+            }
+        }
+    }
+
+    Ok(Datum::Vector(vector))
+}
+
 #[cfg(test)]
 mod test {
     use super::{parse_into_datum, Datum};
     use crate::{lexer::TokenWithPosition, CompilerError, Token};
 
     #[test]
-    fn parse_simple_boolean() {
+    fn parse_simple_datum_test() {
         let vec_of_res: Vec<Result<TokenWithPosition, CompilerError>> =
             vec![Ok(TokenWithPosition {
                 token: Token::Boolean(true),
@@ -86,6 +125,42 @@ mod test {
         assert_eq!(
             parse_into_datum(&mut token_stream).unwrap(),
             Datum::Boolean(true)
+        );
+    }
+
+    #[test]
+    fn parse_vector_test() {
+        let vec_of_res: Vec<Result<TokenWithPosition, CompilerError>> = vec![
+            Ok(TokenWithPosition {
+                token: Token::Punctuator(String::from("#(")),
+                line: 0,
+                column: 0,
+            }),
+            Ok(TokenWithPosition {
+                token: Token::Punctuator(String::from("#(")),
+                line: 0,
+                column: 0,
+            }),
+            Ok(TokenWithPosition {
+                token: Token::Boolean(true),
+                line: 0,
+                column: 0,
+            }),
+            Ok(TokenWithPosition {
+                token: Token::Punctuator(String::from(")")),
+                line: 0,
+                column: 0,
+            }),
+            Ok(TokenWithPosition {
+                token: Token::Punctuator(String::from(")")),
+                line: 0,
+                column: 0,
+            }),
+        ];
+        let mut token_stream = vec_of_res.into_iter().peekable();
+        assert_eq!(
+            parse_into_datum(&mut token_stream).unwrap(),
+            Datum::Vector(vec![Datum::Vector(vec![Datum::Boolean(true)])])
         );
     }
 }

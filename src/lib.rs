@@ -29,6 +29,9 @@ pub enum CompilerError {
     #[error("Unexpected token encountered at line {0}, column {1} while parsing input")]
     UnexpectedToken(usize, usize),
 
+    #[error("Missing close paren at unknown position")]
+    MissingCloseParen,
+
     /// Indicates an IO error
     ///
     /// Usually happens if the source files cannot be opened
