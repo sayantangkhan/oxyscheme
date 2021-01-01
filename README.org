@@ -4,6 +4,7 @@ meant to be educational, and not fast and state-of-art.
 
 ** Things to do
 *** Features to implement/fix
+- [ ] Ensure that the tail calls happen wherever possible in the parser
 - [ ] Lex tokens that don't necessarily end with delimiter
 - [ ] Add more comprehensive tests using the source code files in ~./input/~
 - [ ] Figure out how to show line and column numbers for parse error.
