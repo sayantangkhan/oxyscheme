@@ -104,6 +104,7 @@ where
             }
 
             None => {
+                // Figure out a way to include the line and column number of the error
                 return Err(CompilerError::MissingCloseParen);
             }
         }
@@ -135,7 +136,55 @@ fn parse_list<I>(token_stream: &mut Peekable<I>) -> Result<Datum, CompilerError>
 where
     I: Iterator<Item = Result<TokenWithPosition, CompilerError>>,
 {
-    todo!()
+    let mut car: Vec<Datum> = Vec::new();
+
+    loop {
+        match token_stream.peek() {
+            Some(Ok(token_with_position)) => {
+                let token = &token_with_position.token;
+                match token {
+                    Token::Punctuator(p) if p == ")" => {
+                        token_stream.next();
+                        return Ok(Datum::List(car));
+                    }
+                    Token::Punctuator(p) if p == "." => {
+                        return parse_cdr(token_stream, car);
+                    }
+                    _ => {
+                        let next_datum = parse_datum(token_stream)?;
+                        car.push(next_datum);
+                    }
+                }
+            }
+            Some(Err(_)) => {
+                return Err(token_stream.next().unwrap().unwrap_err());
+            }
+            None => {
+                // Figure out a way to include the line and column number of the error
+                return Err(CompilerError::MissingCloseParen);
+            }
+        }
+    }
+}
+
+fn parse_cdr<I>(token_stream: &mut Peekable<I>, car: Vec<Datum>) -> Result<Datum, CompilerError>
+where
+    I: Iterator<Item = Result<TokenWithPosition, CompilerError>>,
+{
+    token_stream.next();
+    let cdr = parse_datum(token_stream)?;
+    match token_stream.next() {
+        Some(Ok(TokenWithPosition {
+            token: Token::Punctuator(p),
+            ..
+        })) if p == ")" => {
+            return Ok(Datum::DottedPair(car, Box::new(cdr)));
+        }
+        _ => {
+            // Figure out a way to include the line and column number of the error
+            return Err(CompilerError::MissingCloseParen);
+        }
+    }
 }
 
 #[cfg(test)]
