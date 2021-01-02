@@ -16,13 +16,13 @@ enum Datum {
     List(Vec<Datum>),
     DottedPair(Vec<Datum>, Box<Datum>),
     Quote(Box<Datum>),
-    BackQuote(Box<Datum>),
-    Comma(Box<Datum>),
-    CommaAt(Box<Datum>),
+    Backquote(Box<Datum>),
+    Unquote(Box<Datum>),
+    UnquoteSplice(Box<Datum>),
     Vector(Vec<Datum>),
 }
 
-fn parse_into_datum<I>(token_stream: &mut Peekable<I>) -> Result<Datum, CompilerError>
+fn parse_datum<I>(token_stream: &mut Peekable<I>) -> Result<Datum, CompilerError>
 where
     I: Iterator<Item = Result<TokenWithPosition, CompilerError>>,
 {
@@ -39,13 +39,17 @@ where
             Token::Identifier(_) => parse_simple_datum(token_stream),
             Token::Whitespace => {
                 token_stream.next();
-                parse_into_datum(token_stream)
+                parse_datum(token_stream)
             }
             Token::Comment => {
                 token_stream.next();
-                parse_into_datum(token_stream)
+                parse_datum(token_stream)
             }
             Token::Punctuator(p) if p == "#(" => parse_vector(token_stream),
+            Token::Punctuator(p) if p == "'" => parse_abbrev(token_stream),
+            Token::Punctuator(p) if p == "`" => parse_abbrev(token_stream),
+            Token::Punctuator(p) if p == "," => parse_abbrev(token_stream),
+            Token::Punctuator(p) if p == ",@" => parse_abbrev(token_stream),
             _ => Err(CompilerError::UnexpectedToken(*line, *column)),
         },
 
@@ -89,7 +93,7 @@ where
                         break;
                     }
                     _ => {
-                        let datum = parse_into_datum(token_stream)?;
+                        let datum = parse_datum(token_stream)?;
                         vector.push(datum);
                     }
                 }
@@ -108,9 +112,35 @@ where
     Ok(Datum::Vector(vector))
 }
 
+fn parse_abbrev<I>(token_stream: &mut Peekable<I>) -> Result<Datum, CompilerError>
+where
+    I: Iterator<Item = Result<TokenWithPosition, CompilerError>>,
+{
+    let TokenWithPosition { token, .. } = token_stream.next().unwrap()?;
+    let datum = parse_datum(token_stream)?;
+    if let Token::Punctuator(s) = token {
+        match s.as_str() {
+            "'" => Ok(Datum::Quote(Box::new(datum))),
+            "`" => Ok(Datum::Backquote(Box::new(datum))),
+            "," => Ok(Datum::Unquote(Box::new(datum))),
+            ",@" => Ok(Datum::UnquoteSplice(Box::new(datum))),
+            _ => unreachable!(),
+        }
+    } else {
+        unreachable!()
+    }
+}
+
+fn parse_list<I>(token_stream: &mut Peekable<I>) -> Result<Datum, CompilerError>
+where
+    I: Iterator<Item = Result<TokenWithPosition, CompilerError>>,
+{
+    todo!()
+}
+
 #[cfg(test)]
 mod test {
-    use super::{parse_into_datum, Datum};
+    use super::{parse_datum, Datum};
     use crate::{lexer::TokenWithPosition, CompilerError, Token};
 
     #[test]
@@ -123,7 +153,7 @@ mod test {
             })];
         let mut token_stream = vec_of_res.into_iter().peekable();
         assert_eq!(
-            parse_into_datum(&mut token_stream).unwrap(),
+            parse_datum(&mut token_stream).unwrap(),
             Datum::Boolean(true)
         );
     }
@@ -159,8 +189,29 @@ mod test {
         ];
         let mut token_stream = vec_of_res.into_iter().peekable();
         assert_eq!(
-            parse_into_datum(&mut token_stream).unwrap(),
+            parse_datum(&mut token_stream).unwrap(),
             Datum::Vector(vec![Datum::Vector(vec![Datum::Boolean(true)])])
+        );
+    }
+
+    #[test]
+    fn parse_abbrev_test() {
+        let vec_of_res: Vec<Result<TokenWithPosition, CompilerError>> = vec![
+            Ok(TokenWithPosition {
+                token: Token::Punctuator("'".to_string()),
+                line: 0,
+                column: 0,
+            }),
+            Ok(TokenWithPosition {
+                token: Token::Boolean(true),
+                line: 0,
+                column: 1,
+            }),
+        ];
+        let mut token_stream = vec_of_res.into_iter().peekable();
+        assert_eq!(
+            parse_datum(&mut token_stream).unwrap(),
+            Datum::Quote(Box::new(Datum::Boolean(true)))
         );
     }
 }
