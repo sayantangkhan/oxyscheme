@@ -16,8 +16,11 @@ use nom::Err::Error as NomErrorEnum;
 /// Wrapper around `Token` that keeps track of line and column
 #[derive(Debug)]
 pub struct TokenWithPosition {
+    /// Contains the actual token
     pub token: Token,
+    /// The line number of the token
     pub line: usize,
+    /// The column number of the token
     pub column: usize,
 }
 

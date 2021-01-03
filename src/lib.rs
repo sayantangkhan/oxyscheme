@@ -6,11 +6,10 @@
 
 #![warn(missing_docs, unused_variables, rust_2018_idioms)]
 
-mod lexer;
-mod parser;
+pub mod lexer;
+pub mod parser;
 pub mod reader;
 
-use lexer::Token;
 use thiserror::Error;
 
 /// The toplevel error type for the crate
@@ -23,12 +22,15 @@ pub enum CompilerError {
     #[error("Lex error at line {1}, column {2}, near \"{0}\" while lexing input")]
     LexError(String, usize, usize),
 
+    /// Error variant handling the token stream ending too early
     #[error("Token stream ended unexpectedly")]
     TokenStreamEnded,
 
+    /// Error variant handling unexpected tokens
     #[error("Unexpected token encountered at line {0}, column {1} while parsing input")]
     UnexpectedToken(usize, usize),
 
+    /// Error variant handling unclosed lists or vectors
     #[error("Missing close paren at unknown position")]
     MissingCloseParen,
 

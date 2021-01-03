@@ -1,11 +1,12 @@
 //! Handles reading files, and annotating tokens with line and column numbers
 use crate::lexer::*;
+use crate::parser::{parse_datum, Datum};
 use crate::*;
 use anyhow::Result;
 use std::{
     fs::File,
     io::{BufRead, BufReader, Lines},
-    iter::Enumerate,
+    iter::{Enumerate, Peekable},
     path::PathBuf,
 };
 
@@ -21,8 +22,17 @@ use std::{
 /// way of turning a `FileLexer` into `Result<Vec<TokenWithPosition>, CompilerError>` is the
 /// following.
 ///
-/// ```ignore
-/// let file_lexer = FileLexer::new(filename)?;
+/// ```
+/// # use oxyscheme::CompilerError;
+/// # use oxyscheme::reader::FileLexer;
+/// # use oxyscheme::lexer::TokenWithPosition;
+/// # use std::path::Path;
+/// # let filename = &Path::new(env!("CARGO_MANIFEST_DIR"))
+/// #                .join("inputs/hello-world.scm")
+/// #                .into_os_string()
+/// #                .into_string()
+/// #                .unwrap();
+/// let file_lexer = FileLexer::new(filename).unwrap();
 /// let vec_of_tokens_res: Result<Vec<TokenWithPosition>, CompilerError> = file_lexer.into_iter().collect();
 /// ```
 pub struct FileLexer {
@@ -110,5 +120,70 @@ impl Iterator for FileLexerIntoIter {
                 )));
             }
         }
+    }
+}
+
+/// Iterator adapter that transforms a `TokenStream` to a stream of `Datum`
+///
+/// An instance of `DatumStream` can be created by first creating a `TokenStream`,
+/// and then turning that into an iterator, which is then wrapped in a `DatumStream`.
+///
+/// ```
+/// # use oxyscheme::CompilerError;
+/// # use oxyscheme::reader::{FileLexer, DatumIterator};
+/// # use oxyscheme::parser::Datum;
+/// # use oxyscheme::lexer::TokenWithPosition;
+/// # use std::path::Path;
+/// # let filename = &Path::new(env!("CARGO_MANIFEST_DIR"))
+/// #                .join("inputs/hello-world.scm")
+/// #                .into_os_string()
+/// #                .into_string()
+/// #                .unwrap();
+/// let file_lexer = FileLexer::new(filename).unwrap();
+/// let token_stream = file_lexer.into_iter();
+/// let datum_stream = DatumIterator::new(token_stream);
+/// let vec_of_datums_res: Result<Vec<Datum>, CompilerError> = datum_stream.collect();
+/// ```
+pub struct DatumIterator<I>
+where
+    I: Iterator<Item = Result<TokenWithPosition, CompilerError>>,
+{
+    token_stream: Peekable<I>,
+    encountered_error: bool,
+}
+
+impl<I> DatumIterator<I>
+where
+    I: Iterator<Item = Result<TokenWithPosition, CompilerError>>,
+{
+    /// Creates a `DatumStream` from a `TokenStream`
+    pub fn new(token_stream: I) -> Self {
+        DatumIterator {
+            token_stream: token_stream.peekable(),
+            encountered_error: false,
+        }
+    }
+}
+
+impl<I> Iterator for DatumIterator<I>
+where
+    I: Iterator<Item = Result<TokenWithPosition, CompilerError>>,
+{
+    type Item = Result<Datum, CompilerError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.encountered_error {
+            return None;
+        }
+
+        if let None = self.token_stream.peek() {
+            return None;
+        }
+
+        let datum_res = parse_datum(&mut self.token_stream);
+        if let Err(_) = datum_res {
+            self.encountered_error = true;
+        }
+        Some(datum_res)
     }
 }
