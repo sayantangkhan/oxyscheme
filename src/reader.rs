@@ -176,9 +176,7 @@ where
             return None;
         }
 
-        if self.token_stream.peek().is_none() {
-            return None;
-        }
+        self.token_stream.peek()?;
 
         let datum_res = parse_datum(&mut self.token_stream);
         if datum_res.is_err() {
