@@ -28,7 +28,7 @@ use std::{
 /// # use oxyscheme::lexer::TokenWithPosition;
 /// # use std::path::Path;
 /// # let filename = &Path::new(env!("CARGO_MANIFEST_DIR"))
-/// #                .join("inputs/hello-world.scm")
+/// #                .join("inputs/good-inputs/hello-world.scm")
 /// #                .into_os_string()
 /// #                .into_string()
 /// #                .unwrap();
@@ -135,7 +135,7 @@ impl Iterator for FileLexerIntoIter {
 /// # use oxyscheme::lexer::TokenWithPosition;
 /// # use std::path::Path;
 /// # let filename = &Path::new(env!("CARGO_MANIFEST_DIR"))
-/// #                .join("inputs/hello-world.scm")
+/// #                .join("inputs/good-inputs/hello-world.scm")
 /// #                .into_os_string()
 /// #                .into_string()
 /// #                .unwrap();
