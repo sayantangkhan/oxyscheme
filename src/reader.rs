@@ -109,15 +109,15 @@ impl Iterator for FileLexerIntoIter {
                 };
                 self.cursor_position = self.input_string.len() - leftover.len();
 
-                return Some(Ok(token_with_position));
+                Some(Ok(token_with_position))
             }
             Err(_) => {
                 self.encountered_error = true;
-                return Some(Err(CompilerError::LexError(
+                Some(Err(CompilerError::LexError(
                     String::from(&self.input_string[self.cursor_position..]),
                     self.line_number,
                     self.cursor_position,
-                )));
+                )))
             }
         }
     }
@@ -176,12 +176,12 @@ where
             return None;
         }
 
-        if let None = self.token_stream.peek() {
+        if self.token_stream.peek().is_none() {
             return None;
         }
 
         let datum_res = parse_datum(&mut self.token_stream);
-        if let Err(_) = datum_res {
+        if datum_res.is_err() {
             self.encountered_error = true;
         }
         Some(datum_res)

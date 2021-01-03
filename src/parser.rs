@@ -197,12 +197,10 @@ where
         Some(Ok(TokenWithPosition {
             token: Token::Punctuator(p),
             ..
-        })) if p == ")" => {
-            return Ok(Datum::DottedPair(car, Box::new(cdr)));
-        }
+        })) if p == ")" => Ok(Datum::DottedPair(car, Box::new(cdr))),
         _ => {
             // Figure out a way to include the line and column number of the error
-            return Err(CompilerError::MissingCloseParen);
+            Err(CompilerError::MissingCloseParen)
         }
     }
 }
