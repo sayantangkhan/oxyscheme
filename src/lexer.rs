@@ -143,7 +143,7 @@ fn lex_identifier(input: &str) -> LexResult<'_> {
     let peculiar_identifier = alt((tag("+"), tag("-"), tag("...")));
     let (leftover, parsed) = alt((non_peculiar, peculiar_identifier))(input)?;
 
-    if !(leftover == "") {
+    if !leftover.is_empty() {
         peek_delimiter(leftover)?;
     };
 
