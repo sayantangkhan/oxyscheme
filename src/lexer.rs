@@ -142,7 +142,11 @@ fn non_peculiar(input: &str) -> IResult<&str, &str> {
 fn lex_identifier(input: &str) -> LexResult<'_> {
     let peculiar_identifier = alt((tag("+"), tag("-"), tag("...")));
     let (leftover, parsed) = alt((non_peculiar, peculiar_identifier))(input)?;
-    peek_delimiter(leftover)?;
+
+    if !(leftover == "") {
+        peek_delimiter(leftover)?;
+    };
+
     Ok((leftover, Token::Identifier(String::from(parsed))))
 }
 
@@ -294,8 +298,12 @@ mod test {
         );
         assert_eq!(
             lex_identifier("..."),
-            Err(NomErrorEnum(NomErrorStruct::new("", ErrorKind::OneOf)))
+            Ok(("", Token::Identifier("...".to_string())))
         );
+        // assert_eq!(
+        //     lex_identifier("..."),
+        //     Err(NomErrorEnum(NomErrorStruct::new("", ErrorKind::OneOf)))
+        // );
         assert_eq!(
             lex_identifier("asdf,"),
             Err(NomErrorEnum(NomErrorStruct::new(",", ErrorKind::OneOf)))
