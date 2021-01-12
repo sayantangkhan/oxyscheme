@@ -131,7 +131,7 @@ fn non_peculiar(input: &str) -> IResult<&str, &str> {
     let special_subsequent = one_of("+-.@");
     let subsequent = alt((initial, digit, special_subsequent));
 
-    // The repeated code is to get around the compiler's move semantics.
+    // The repeated code is to get around the borrow checker.
     let special_initial = one_of("!$%&*/:<=>?^_~");
     let letter = satisfy(|c| c.is_alphabetic());
     let initial = alt((letter, special_initial));
