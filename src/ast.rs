@@ -1,3 +1,5 @@
+use anyhow::Context;
+
 use crate::{lexer::LispNum, parser::Datum};
 
 enum Expression {
@@ -9,10 +11,10 @@ enum Expression {
     Quotation(Box<Expression>),
     ProcedureCall(ProcedureCall),
     Lambda(Lambda),
-    // Conditional
-    // Assignment
+    Conditional(Conditional),
+    Assignment(Assignment),
     // Derived
-    // MacroUse
+    MacroUse(MacroUse),
     // MacroBlock
 }
 
@@ -42,6 +44,53 @@ struct LambdaBody {
     return_expression: Box<Expression>,
 }
 
-struct Definition {
-    // Insert definition later
+enum Definition {
+    DefVar(Variable, Box<Expression>),
+    DefLambda(Variable, Vec<Variable>, LambdaBody),
+    Multiple(Vec<Definition>),
 }
+
+struct Conditional {
+    test: Box<Expression>,
+    consequent: Box<Expression>,
+    alternate: Option<Box<Expression>>,
+}
+
+struct Assignment {
+    variable: Variable,
+    expression: Box<Expression>,
+}
+
+struct MacroUse {
+    keyword: String,
+    datum: Vec<Datum>,
+}
+
+enum MacroBlock {
+    Let(Syntax),
+    LetRec(Syntax),
+}
+
+struct Syntax {
+    syntax_spec: Vec<SyntaxSpec>,
+    body: LambdaBody,
+}
+
+struct SyntaxSpec {
+    keyword: String,
+    transformer_spec: TransformerSpec,
+}
+
+struct TransformerSpec {
+    identifiers: Vec<String>,
+    syntax_rules: Vec<SyntaxRule>,
+}
+
+struct SyntaxRule {
+    pattern: Pattern,
+    template: Template,
+}
+
+struct Pattern {}
+
+struct Template {}
