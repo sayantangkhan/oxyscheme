@@ -35,6 +35,9 @@ pub enum CompilerError {
     #[error("Missing close paren at unknown position")]
     MissingCloseParen,
 
+    #[error("Syntax error")]
+    SyntaxError,
+
     /// Indicates an IO error
     ///
     /// Usually happens if the source files cannot be opened
