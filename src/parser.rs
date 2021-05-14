@@ -8,7 +8,7 @@ use std::iter::Peekable;
 use crate::{lexer::LispNum, CompilerError};
 
 /// An enum representing `Datum`, i.e. the nodes of the abstract syntax tree
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Datum {
     /// Represents a boolean
     Boolean(bool),
