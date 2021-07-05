@@ -1,6 +1,6 @@
-use anyhow::Context;
+// use anyhow::Context;
 use lazy_static::lazy_static;
-use std::{collections::HashSet, thread::current};
+use std::collections::HashSet;
 
 use crate::{lexer::LispNum, parser::Datum, CompilerError};
 
@@ -241,7 +241,7 @@ fn parse_lambda<'a>(
     let mut current_scope = Scope::new();
 
     let cadr = lambda_cdr.get(0).ok_or(CompilerError::SyntaxError)?;
-    let cddr = &lambda_cdr[1..];
+    let mut cddr = lambda_cdr.into_iter();
 
     let lambda_args = match cadr {
         Datum::Identifier(variable_name) => {
@@ -303,15 +303,33 @@ fn parse_lambda<'a>(
         }
     };
 
-    let definitions = parse_scoped_definitions(cddr, &mut current_scope, parent_scope)?;
+    let definitions = parse_scoped_definitions(&mut cddr, &mut current_scope, parent_scope)?;
 
     todo!()
 }
 
-fn parse_scoped_definitions(
-    body: &[Datum],
+fn parse_scoped_definitions<'a, I>(
+    mut body: &mut I,
     current_scope: &mut Scope,
     parent_scope: &[&Scope],
-) -> Result<Vec<Definition>, CompilerError> {
-    todo!()
+) -> Result<Vec<Definition>, CompilerError>
+where
+    I: Iterator<Item = &'a Datum>,
+{
+    let mut definitions: Vec<Definition> = Vec::new();
+    while let Some(datum) = body.next() {
+        match datum {
+            Datum::List(elements) => {
+                let head = elements.get(0).ok_or(CompilerError::SyntaxError)?;
+                if let Variable { name } = head && name == "define" {
+                    todo!()
+                }
+            }
+            _ => {
+                break;
+            }
+        }
+    }
+
+    Ok(definitions)
 }
